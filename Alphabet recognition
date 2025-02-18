@@ -1,0 +1,73 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.layers import Dense, Dropout
+
+A1 = [0,1,0, 1,0,1, 1,1,1, 1,0,1, 1,0,1]  # Original
+A2 = [0,1,1, 1,0,1, 1,1,1, 1,0,1, 1,1,1]  # Slightly different
+A3 = [0,1,0, 1,1,1, 1,1,1, 1,0,1, 1,1,1]  # More filled
+
+B1 = [1,1,0, 1,0,1, 1,1,0, 1,0,1, 1,1,0]  # Original
+B2 = [1,1,1, 1,0,1, 1,1,1, 1,0,1, 1,1,1]  # More filled
+B3 = [1,1,0, 1,1,1, 1,1,0, 1,0,1, 1,1,1]  # Slightly different
+
+C1 = [0,1,1, 1,0,0, 1,0,0, 1,0,0, 0,1,1]  # Original
+C2 = [0,1,1, 1,1,0, 1,0,0, 1,1,0, 0,1,1]  # Different edges
+C3 = [0,1,1, 1,0,0, 1,1,0, 1,0,0, 0,1,1]  # Slight variation
+
+D1 = [1,1,0, 1,0,1, 1,0,1, 1,0,1, 1,1,0]  # Original
+D2 = [1,1,1, 1,0,1, 1,0,1, 1,0,1, 1,1,1]  # More filled
+D3 = [1,1,0, 1,0,1, 1,1,1, 1,0,1, 1,1,0]  # Slightly different
+
+# Expanded dataset
+X = np.array([
+    A1, A2, A3,  # A variations
+    B1, B2, B3,  # B variations
+    C1, C2, C3,  # C variations
+    D1, D2, D3   # D variations
+])
+
+# Labels: A=0, B=1, C=2, D=3
+Y = np.array([
+    [1,0,0,0], [1,0,0,0], [1,0,0,0],  # A
+    [0,1,0,0], [0,1,0,0], [0,1,0,0],  # B
+    [0,0,1,0], [0,0,1,0], [0,0,1,0],  # C
+    [0,0,0,1], [0,0,0,1], [0,0,0,1]   # D
+])
+
+# adding noise
+noise_factor = 0.1
+X_noisy = X + noise_factor * np.random.randn(*X.shape)
+X_noisy = np.clip(X_noisy, 0, 1)
+
+# Combine clean and noisy data
+X_train = np.vstack((X, X_noisy))
+Y_train = np.vstack((Y, Y))
+
+# model
+model = keras.Sequential([
+    Dense(32, activation='relu', input_shape=(15,)),  # More neurons
+    Dropout(0.3),  # drop 30% neurons
+    Dense(32, activation='relu'),
+    Dropout(0.3),
+    Dense(16, activation='relu'),
+    Dense(4, activation='softmax')  # 4 output classes (A, B, C, D)
+])
+
+# Compile
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train
+model.fit(X_train, Y_train, epochs=500, verbose=1)
+
+# Save the model
+model.save("alphabet_recognition_model.h5")
+
+# Function to test unseen data
+def predict_letter(matrix):
+    matrix = np.array(matrix).reshape(1, 15)
+    prediction = model.predict(matrix)
+    predicted_class = np.argmax(prediction)
+    letters = ['A', 'B', 'C', 'D']
+    print(f"Predicted Letter: {letters[predicted_class]}")
+
